@@ -376,7 +376,7 @@ body {
 }
 
 @media (max-width: 1200px) {
-  .content-container {
+  content-container {
     flex-direction: column;
   }
 
