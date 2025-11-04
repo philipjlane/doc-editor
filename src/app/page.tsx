@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { DocumentEditor } from '../components/DocumentEditor';
 import { Document } from '../types/documentation';
 
 export default function Home() {
   const [document, setDocument] = useState<Document | null>(null);
+  const [importedDocument, setImportedDocument] = useState<Document | null>(null);
   const [showJson, setShowJson] = useState(false);
+  const [editorKey, setEditorKey] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDocumentChange = (doc: Document) => {
     setDocument(doc);
@@ -33,11 +36,21 @@ export default function Home() {
       reader.onload = e => {
         try {
           const json = JSON.parse(e.target?.result as string);
+          // Validate basic structure
+          if (!json.topic || !json.topic.metadata) {
+            alert('Invalid document format: missing topic or metadata');
+            return;
+          }
+          // Set the imported document and increment key to force editor remount
+          setImportedDocument(json);
           setDocument(json);
-          // Force re-render by creating new component instance
-          window.location.reload();
+          setEditorKey(prev => prev + 1);
+          // Reset file input so the same file can be imported again
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
         } catch (error) {
-          alert('Invalid JSON file');
+          alert('Invalid JSON file: ' + (error instanceof Error ? error.message : 'Unknown error'));
         }
       };
       reader.readAsText(file);
@@ -59,6 +72,7 @@ export default function Home() {
           <label className="btn">
             Import JSON
             <input
+              ref={fileInputRef}
               type="file"
               accept=".json"
               onChange={handleImport}
@@ -70,7 +84,11 @@ export default function Home() {
 
       <div className="content-container">
         <div className="editor-section">
-          <DocumentEditor onChange={handleDocumentChange} />
+          <DocumentEditor
+            key={editorKey}
+            initialDocument={importedDocument || undefined}
+            onChange={handleDocumentChange}
+          />
         </div>
 
         {showJson && (
